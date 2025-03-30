@@ -4,6 +4,8 @@ output:
   html_document:
     theme: cerulean
     code_folding: hide
+    keep-md: true
+    warning: false
 ---
 
 ```{r message=FALSE}
