@@ -23,3 +23,4 @@ ResourceSelection (provides the hoslem.test function for testing the goodness of
 -Turnovers
 -The interactivity of all of these stats
 -ML model
+-Adjust the scoring methods so they are measured at equal rates
