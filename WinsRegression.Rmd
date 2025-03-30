@@ -1,0 +1,154 @@
+---
+title: "WinsRegression"
+output: 
+  html_document:
+    theme: cerulean
+    code_folding: hide
+---
+
+```{r message=FALSE}
+#| plot-label: Load/Install Packages
+
+# install.packages("hoopR")
+library(hoopR)
+library(tidyverse)
+library(pander)
+library(ResourceSelection)
+```
+# Results and food for thought
+
+I tested the effect that 4 different types of scores have on the probability of an NBA team winning. The results show that 3 point makes have the greatest effect on the odds of a team winning in the NBA. For every 3 pointer made, the odds of an NBA team winning go up by 31%. Thankfully, the Bulls have already been putting work into this trend, increasing their average three point makes by 4, or from 11 last year to 15 this year. The next best increase in odds of winning is from every free throw made, with a 9% increase in odds of winning for every free throw made. This is where the Bulls have struggled. They only make 15 free throws (second worst in the league) on average despite averaging 49 points in the paint (13th in the league). It's something to work on given it's even more important to the odds of winning than points in the paint. Lastly, fast break points only increase the odds of winning by 2%. 
+
+In future work, we would like to implement defensive stats and see how those also effect the odds of winning. 
+
+## Model
+
+By calculating the exponents of the coefficients for each variables effect on the model, we can come up with a probability that $Y_i$, or the team_winner variable being true, is actually true. 
+
+$$
+  P(Y_i = 1|\, x_i) = \frac{e^{\beta_0 + \beta_i x_i}}{1+e^{\beta_0 + \beta_i x_i}} = \pi_i
+$$
+
+## Hypotheses
+
+The null hypotheses of this test was that none of the $\beta_i$ or the X variables is different from 0. In other words they do not change the probability of a team winning when they increase by one with all other variables being held constant. The alternative hypotheses is that at least one of the $\beta_i$ or X variables estimated change in the log of the odds of winning is different from 0. The level of significance is .05 for this test. $\beta_0$ will not be significant to this test because very few teams if any would every score 0 in any of these categories. 
+
+$$H_o: \beta_i = 0$$
+$$\beta_i \neq 0$$
+$$\alpha = .05$$
+
+## Data
+
+This data was grabbed from the 'hoopsR' package in R. It scrapes ESPN for the latest in season box scores data from the NBA. 
+
+```{r message=FALSE, warning=FALSE}
+nba <- load_nba_team_box(seasons = most_recent_nba_season())
+
+nba_filter <- nba %>% 
+  filter(team_id < 31) %>% 
+  mutate(points_in_paint = as.numeric(points_in_paint), fast_break_points = as.numeric(fast_break_points)) %>% 
+  drop_na()
+
+bulls_filter <- nba_filter %>% 
+  filter(team_abbreviation == "CHI")
+```
+
+## Numerical Summary
+
+We can see here that the p-value is significantly smaller than the level of significance for each variable. This means that each variable does have a significant effect on the odds of the team winning. This would also mean we reject the null hypotheses, and that the X variables, $\beta_i$, are different from 0.
+
+```{r}
+
+nba.glm <- glm(team_winner == "TRUE" ~ points_in_paint+free_throws_made+three_point_field_goals_made+fast_break_points, data = nba_filter, family = binomial)
+
+pander(summary(nba.glm))
+
+```
+
+```{r}
+palette(c("firebrick", "green", "black", "darkorchid4"))
+b <- coef(nba.glm)
+pander(b)
+```
+## Model with Coefficients
+
+This is what the model looks like for each type of score with the y-intercept ($\beta_0$) plus it's coefficient ($\beta_i$). 
+
+### Points in Paint
+
+$$
+  P(Y_i = 1|\, x_i) = \frac{e^{-9.13771738 + .07391288 x_i}}{1+e^{-9.13771738 + .07391288 x_i}} = \pi_i
+$$
+
+### Free Throws Made
+
+$$
+  P(Y_i = 1|\, x_i) = \frac{e^{-9.13771738 + .09078795 x_i}}{1+e^{-9.13771738 + .09078795 x_i}} = \pi_i
+$$
+
+### Three Point Field Goal Makes
+
+$$
+  P(Y_i = 1|\, x_i) = \frac{e^{-9.13771738 + .27020760 x_i}}{1+e^{-9.13771738 + .27020760 x_i}} = \pi_i
+$$
+
+### Fast Break Points
+
+$$
+  P(Y_i = 1|\, x_i) = \frac{e^{-9.13771738 + .02219208  x_i}}{1+e^{-9.13771738 + .02219208  x_i}} = \pi_i
+$$
+
+## Graphical Summary
+
+This graph shows the stark difference that three point makes has over the odds of winning compared to the other 3 types of scores. There's a noticeable gap between the uptick in the odds of winning between 3 point makes and free throw makes. Points in the paint, and fast break points take a lot more makes/points in order to start effecting the odds of winning significantly. 
+
+```{r}
+plot(team_winner == "TRUE" ~ points_in_paint, data = nba_filter, pch=16, ylab= "Probability of team winning", xlab = "Type of Score")
+curve(exp(b[1]+b[2]*x)/(1+exp(b[1]+b[2]*x)), add=TRUE, col = palette()[1])
+curve(exp((b[1])+(b[2]+b[3])*x)/(1+exp((b[1])+(b[2]+b[3])*x)), add=TRUE, col = palette()[2])
+curve(exp((b[1])+(b[2]+b[4])*x)/(1+exp((b[1])+(b[2]+b[4])*x)), add=TRUE, col = palette()[3])
+curve(exp((b[1])+(b[2]+b[5])*x)/(1+exp((b[1])+(b[2]+b[5])*x)), add=TRUE, col = palette()[4])
+
+legend("topleft", legend = c("Points in Paint" ,"Free Throws Made", "Three Point Field Goals Made", "Fast Break Points"), col = palette(), lty = 1, bty = 'n')
+
+title(main = "The line curve for each type of score\nand the change in the odds of winning as they increase")
+```
+
+## Change in the log of the odds for each type of score
+
+Here is where we got the % increase for each type of score in the odds of winning. Taking the exponent of each coefficient gives us that number. Because they are all over 1, this means they effect the odds of winning positively. Therefore, we can subtract their number by 1 and then times it by 100 to get the percentage increase in the odds of winning.
+
+```{r}
+pander(exp(b[2]))
+pander(exp(b[3]))
+pander(exp(b[4]))
+pander(exp(b[5]))
+
+
+```
+## Diagnosing the fit of the model
+
+With Logisitic regression tests we must make sure that the data fits well with the test. A p-value under the level of significance would signal a bad fit, and that we can't trust the results of the test. Thankfully, our p-value is .8809, so we don't have to worry about the data being a bad fit.
+```{r message=FALSE}
+hoslem.test(nba.glm$y, nba.glm$fitted, g=10) %>% pander()
+```
+## Predicting Bulls Probability of Winning
+
+Finally, if you're curious about the odds of winning for the Bulls given their current averages, the odds of winning is about 61%. As stated previously, caution must be taken with these results because they do not currently take into account the Bulls defense.
+
+```{r}
+bulls_averages <- bulls_filter %>% 
+  group_by(team_abbreviation) %>% 
+  summarise(avg_pip = mean(points_in_paint), avg_threes = mean(three_point_field_goals_made), avg_fts = mean(free_throws_made), avg_fb = mean(fast_break_points))
+
+avg_pip <- bulls_averages$avg_pip 
+avg_threes <- bulls_averages$avg_threes
+avg_fts <- bulls_averages$avg_fts
+avg_fb <- bulls_averages$avg_fb
+
+
+pander(predict(nba.glm, newdata = data.frame(points_in_paint = avg_pip, three_point_field_goals_made = avg_threes, free_throws_made = avg_fts, fast_break_points = avg_fts), type = "response"))
+
+
+```
+

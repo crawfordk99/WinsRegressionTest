@@ -1,0 +1,12 @@
+name: winsregression
+title: WinsRegression
+username: chisports1fan
+account: chisports1fan
+server: shiny.byui.edu
+hostUrl: https://shiny.byui.edu/__api__
+appId: 2490
+bundleId: 4994
+url: https://shiny.byui.edu/content/dbeb6955-3967-451d-becb-0bce6a04ddc9/
+version: 1
+asMultiple: FALSE
+asStatic: TRUE
